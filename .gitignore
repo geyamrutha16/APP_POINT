@@ -1,0 +1,21 @@
+# Environment variables
+.env
+env.env
+
+# Node modules
+node_modules/
+
+# Uploads directory
+uploads/
+
+# System files
+.DS_Store
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history

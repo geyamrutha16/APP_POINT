@@ -128,8 +128,86 @@ export const verifyCertificate = async (req, res) => {
 
         res.send(`
             <html>
-                <!-- ... rest of your HTML template ... -->
-                <p>Scanned at: ${new Date().toLocaleString()}</p>
+                <head>
+                    <title>Certificate Verification</title>
+                    <style>
+                        body {
+                            font-family: 'Segoe UI', sans-serif;
+                            background-color: #f3f3f3;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            height: 100vh;
+                            margin: 0;
+                        }
+                        .container {
+                            background: white;
+                            padding: 30px 40px;
+                            border-radius: 10px;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                            max-width: 800px;
+                            width: 90%;
+                        }
+                        .header {
+                            border-bottom: 1px solid #ccc;
+                            margin-bottom: 20px;
+                            padding-bottom: 10px;
+                            display: flex;
+                            align-items: center;
+                        }
+                        .header img {
+                            height: 50px;
+                        }
+                        .status-bar {
+                            background-color: #28a745;
+                            color: white;
+                            padding: 12px 20px;
+                            border-radius: 6px;
+                            font-weight: bold;
+                            margin: 20px 0;
+                            text-align: center;
+                            font-size: 18px;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-top: 10px;
+                        }
+                        td {
+                            padding: 12px 15px;
+                            border: 1px solid #ddd;
+                            font-size: 16px;
+                        }
+                        .image-preview {
+                            margin-top: 20px;
+                            text-align: center;
+                        }
+                        .image-preview img {
+                            max-width: 100%;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <img src="https://th.bing.com/th/id/R.59213678243bd1208cbe326db74b9e34?rik=kobU1oUkWq%2fUcw&riu=http%3a%2f%2fnecg.ac.in%2fimages%2flogo-engg.png&ehk=ZREqNGZgA6ZXMWqjGsLzQF7ucDpxFoosrAnC2MNlVfE%3d&risl=&pid=ImgRaw&r=0" alt="Logo" />
+                        </div>
+                        <div class="status-bar">✅ Certificate Verified</div>
+                        <table>
+                            <tr><td><strong>Name:</strong></td><td>${cert.name}</td></tr>
+                            <tr><td><strong>Hall Ticket Number:</strong></td><td>${cert.regNo}</td></tr>
+                            <tr><td><strong>Year:</strong></td><td>${cert.year}</td></tr>
+                            <tr><td><strong>Semester:</strong></td><td>${cert.sem}</td></tr>
+                            <tr><td><strong>Department:</strong></td><td>${cert.department}</td></tr>
+                            <tr><td><strong>IAC Number:</strong></td><td>${cert.iacNo}</td></tr>
+                            <tr><td><strong>Event:</strong></td><td>${cert.eventId?.eventName || "N/A"}</td></tr>
+                        </table>
+                                            <p>Scanned at: ${new Date().toLocaleString()}</p>
+
+                    </div>
+                </body>
             </html>
         `);
 
@@ -307,23 +385,37 @@ const generateCertificates = async (event) => {
                 const canvas = createCanvas(templateImage.width, templateImage.height);
                 const ctx = canvas.getContext("2d");
                 ctx.drawImage(templateImage, 0, 0);
-                ctx.fillStyle = "#000";
+                ctx.fillStyle = "#000"; // try white or red if background is dark
                 ctx.textAlign = "left";
 
-                const fitText = (ctx, text, maxWidth, x, y, baseSize = 50) => {
+                // Fit and draw name
+                const fitText = (ctx, text, maxWidth, x, y, baseSize = 100) => {
                     let fontSize = baseSize;
                     do {
                         ctx.font = `bold ${fontSize}px Arial`;
                         fontSize--;
-                    } while (ctx.measureText(text).width > maxWidth && fontSize > 20);
+                    } while (ctx.measureText(text).width > maxWidth && fontSize > 35); // prevent too-small fonts
+                    console.log(`Font size for name "${text}":`, fontSize);
                     ctx.fillText(text, x, y);
                 };
-
+                /*
+                                ctx.fillStyle = "#000";
+                                ctx.textAlign = "left";
+                
+                                const fitText = (ctx, text, maxWidth, x, y, baseSize = 50) => {
+                                    let fontSize = baseSize;
+                                    do {
+                                        ctx.font = `bold ${fontSize}px Arial`;
+                                        fontSize--;
+                                    } while (ctx.measureText(text).width > maxWidth && fontSize > 20);
+                                    ctx.fillText(text, x, y);
+                                };
+                */
                 // Generate unique IAC number
                 const iacNo = uuidv4().split("-")[0].toUpperCase();
 
                 // Generate verification URL
-                const verificationUrl = `http://localhost:3000/api/certificates/verify/${iacNo}`;
+                const verificationUrl = `http://localhost:5000/api/certificates/verify/${iacNo}`;
 
                 // Generate QR Code
                 const qrDataUrl = await QRCode.toDataURL(verificationUrl);
@@ -336,6 +428,7 @@ const generateCertificates = async (event) => {
                 // Place values
                 fitText(ctx, p.name, 1348, 1186);
                 ctx.font = "bold 40px Arial";
+                ctx.fillText(p.name, 1348, 1186);
                 ctx.fillText(p.regNo, 987, 1340);
                 ctx.fillText(p.year, 1778, 1336);
                 ctx.fillText(p.sem, 2145, 1336);
@@ -380,8 +473,8 @@ const generateCertificates = async (event) => {
                     "3-1": 5, "3-2": 6, "4-1": 7, "4-2": 8
                 };
                 semIndex = yearSemMap[`${p.year}-${p.sem}`];
-
-                if (semIndex !== undefined) {
+                const student = await Student.findOne({ hallticketNumber: p.regNo });
+                if (semIndex !== undefined && student.status === "Active") {
                     const pointsToAdd = event.points || 0;
                     //const pointsToAdd = Math.min(event.points || 0, 20);
                     await Student.updateOne(

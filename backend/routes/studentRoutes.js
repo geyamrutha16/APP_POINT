@@ -1,6 +1,6 @@
 import express from "express";
 import upload from "../middleware/uploadMiddleware.js";
-import { demote, exportStudents, getStudents, promote, updatePoints, uploadExcel, getInactiveStudents, getUploads, promoteSelected } from "../controllers/studentController.js";
+import { demote, exportStudents, getStudents, promote, updatePoints, uploadExcel, activateStudent, getInactiveStudents, getUploads, promoteSelected } from "../controllers/studentController.js";
 
 const router = express.Router();
 router.post("/upload", upload.single("file"), uploadExcel);
@@ -13,6 +13,7 @@ router.put("/promoteAll", promote);
 router.put("/promoteSelected", promoteSelected);
 router.put("/update/:hallticketNumber", updatePoints);
 router.get('/uploads', getUploads);
+router.put('/activate/:id', activateStudent);
 
 
 export default router;

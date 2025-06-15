@@ -355,6 +355,56 @@ export const demote = async (req, res) => {
     }
 };
 
+export const activateStudent = async (req, res) => {
+    console.log('[activateStudent] Request received to activate student with ID:', req.params.id);
+
+    try {
+        console.log('[activateStudent] Searching for student in database...');
+        const student = await Student.findById(req.params.id);
+
+        if (!student) {
+            console.error('[activateStudent] Error: Student not found with ID:', req.params.id);
+            return res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+
+        console.log('[activateStudent] Current student status:', student.status);
+
+        // Only proceed if student is inactive
+        if (student.status === 'Active') {
+            console.warn('[activateStudent] Warning: Student is already active');
+            return res.status(400).json({
+                success: false,
+                message: 'Student is already active'
+            });
+        }
+
+        console.log('[activateStudent] Updating student status to Active...');
+        student.status = 'Active';
+
+        // Save the updated student
+        const updatedStudent = await student.save();
+
+        console.log('[activateStudent] Student activated successfully:', updatedStudent);
+        res.status(200).json({
+            success: true,
+            message: 'Student activated successfully',
+            data: updatedStudent
+        });
+
+    } catch (error) {
+        console.error('[activateStudent] Error activating student:', error.message);
+        console.error(error.stack);
+        res.status(500).json({
+            success: false,
+            message: 'Error activating student',
+            error: error.message
+        });
+    }
+};
+
 // Promote all active students
 export const promote = async (req, res) => {
     try {
@@ -553,6 +603,9 @@ export const updatePoints = async (req, res) => {
         // Update the points for the given semester (0-based index)
         student.points[semester - 1] = (Number(student.points[semester - 1]) || 0) + parsedPoints;
         student.totalPoints = (Number(student.totalPoints) || 0) + parsedPoints;
+        if (student.totalPoints >= 20) {
+            student.totalPoints = 20;
+        }
         await student.save();
 
         res.json({ message: "Student points updated successfully" });
